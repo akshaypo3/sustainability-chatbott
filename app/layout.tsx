@@ -1,0 +1,18 @@
+export const metadata = {
+  title: 'Sustainability Chatbot',
+  description: 'AI-powered sustainability assistant',
+}
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <html lang="en">
+      <body className="bg-gray-100">
+        {children}
+      </body>
+    </html>
+  )
+}

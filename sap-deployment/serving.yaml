@@ -2,16 +2,16 @@ apiVersion: ai.sap.com/v1alpha1
 kind: ServingTemplate
 metadata:
   name: sustainability-chatbot
-  annotations: |
-    scenarios.ai.sap.com/description: "Sustainability Chatbot using FLAN-T5"
-    scenarios.ai.sap.com/name: "Sustainability"
-    executables.ai.sap.com/description: "Sustainability chatbot service"
-    executables.ai.sap.com/name: "sustainability-chatbot"
-  labels: |
-    scenarios.ai.sap.com/id: "sustainability"
-    ai.sap.com/version: "1.0.0"
+  annotations:
+    "scenarios.ai.sap.com/description": "Sustainability Chatbot using FLAN-T5"
+    "scenarios.ai.sap.com/name": "Sustainability"
+    "executables.ai.sap.com/description": "Sustainability chatbot service"
+    "executables.ai.sap.com/name": "sustainability-chatbot"
+  labels:
+    "scenarios.ai.sap.com/id": "sustainability"
+    "ai.sap.com/version": "1.0.0"
 spec:
-  template: |
+  template:
     apiVersion: serving.kserve.io/v1beta1
     kind: InferenceService
     metadata:

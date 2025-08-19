@@ -21,15 +21,15 @@ spec:
         minReplicas: 1
         maxReplicas: 2
         containers:
-          - name: kserve-container
-            image: ghcr.io/akshaypo3/sustainability-sap-backend:latest
-            ports:
-              - containerPort: 5000
-                protocol: TCP
-            env:
-              - name: PORT
-                value: "5000"
-              - name: MODEL_NAME
-                value: "google/flan-t5-small"
+        - name: kserve-container
+          image: ghcr.io/akshaypo3/sustainability-sap-backend:latest
+          ports:
+          - containerPort: 5000
+            protocol: TCP
+          env:
+          - name: PORT
+            value: "5000"
+          - name: MODEL_NAME
+            value: "google/flan-t5-small"
         imagePullSecrets:
-          - name: ghcr
+        - name: ghcr

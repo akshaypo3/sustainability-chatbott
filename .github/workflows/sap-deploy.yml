@@ -33,7 +33,8 @@ jobs:
         SAP_CLIENT_SECRET: ${{ secrets.SAP_CLIENT_SECRET }}
         SAP_SERVICE_KEY: ${{ secrets.SAP_SERVICE_KEY }}
       run: |
-        pip install sap-ai-core-sdk
+        pip install aicore --quiet
         echo "$SAP_SERVICE_KEY" > service_key.json
-        sapcli login --client-id "$SAP_CLIENT_ID" --client-secret "$SAP_CLIENT_SECRET"
-        sapcli deployment create -f sap-deployment/serving.yaml
+        aicore login --client-id "$SAP_CLIENT_ID" --client-secret "$SAP_CLIENT_SECRET" --service-key service_key.json
+        aicore deployment create -f sap-deployment/serving.yaml
+

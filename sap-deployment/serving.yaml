@@ -17,7 +17,7 @@ spec:
       predictor:
         containers:
         - name: kserve-container
-          image: ghcr.io/your-username/sustainability-chatbot:latest
+          image: ghcr.io/akshaypo3/sustainability-sap-backend:latest
           ports:
             - containerPort: 5000
               protocol: TCP

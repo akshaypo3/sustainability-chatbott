@@ -1,27 +1,22 @@
-export async function callColabAI(question: string): Promise<string> {
-  // This will be replaced with your SAP AI Core endpoint after deployment
-  const endpoint = process.env.SAP_AI_ENDPOINT || "ttps://119775931ea0.ngrok-free.app/predict";
-  
+// lib/ai-core.ts
+export async function callSAPAI(question: string): Promise<string> {
+  // 1. First try SAP AI Core (replace with your actual SAP endpoint later)
+  const SAP_ENDPOINT = "YOUR_FUTURE_SAP_ENDPOINT"; // 👈 Will update after SAP deployment
+  const COLAB_ENDPOINT = "https://fd88ff9c3ee6.ngrok-free.app/predict"; // 👈 Your current ngrok URL
+
   try {
-    const response = await fetch("http://localhost:5000/v1/predict", {
-      method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: question }) // Same as working PowerShell example
-});
-
-    if (!response.ok) {
-      throw new Error(`API request failed with status ${response.status}`);
-    }
-
-    const data = await response.json();
+    // Phase 1: Test with Colab while SAP deploys
+    const response = await fetch(COLAB_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: question })
+    });
     
-    if (data.status === "error") {
-      throw new Error(data.error || "Unknown error from AI service");
-    }
+    const data = await response.json();
+    return data.answer || "I didn't understand that question.";
 
-    return data.answer || "I didn't understand that question. Could you rephrase?";
   } catch (error) {
     console.error("API Error:", error);
-    return "I'm having trouble connecting to the knowledge base. Please try again later.";
+    return "Connection failed. Please try again later.";
   }
 }

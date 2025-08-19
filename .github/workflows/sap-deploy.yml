@@ -1,4 +1,4 @@
-name: Build & Deploy to SAP AI Core
+name: Build and Deploy to SAP AI Core
 
 on:
   push:
@@ -20,7 +20,7 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Build & Push Docker image
+    - name: Build & Push Docker Image
       uses: docker/build-push-action@v4
       with:
         context: ./sap-deployment
@@ -35,8 +35,5 @@ jobs:
       run: |
         pip install aicore --quiet
         echo "$SAP_SERVICE_KEY" > service_key.json
-        aicore login \
-          --client-id "$SAP_CLIENT_ID" \
-          --client-secret "$SAP_CLIENT_SECRET" \
-          --service-key service_key.json
+        aicore login --client-id "$SAP_CLIENT_ID" --client-secret "$SAP_CLIENT_SECRET" --service-key service_key.json
         aicore deployment create -f sap-deployment/serving.yaml

@@ -1,4 +1,4 @@
-name: Build and Deploy to SAP AI Core
+name: SAP AI Core Deployment
 
 on:
   push:
@@ -6,43 +6,29 @@ on:
     paths:
       - 'sap-deployment/**'
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
-
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
-    
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Log in to GitHub Container Registry
-      uses: docker/login-action@v2
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build Docker Image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./sap-deployment
+          push: true
+          tags: ghcr.io/${{ github.repository }}:latest
+          secrets: |
+            ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Build and push Docker image
-      uses: docker/build-push-action@v4
-      with:
-        context: ./sap-deployment
-        push: true
-        tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-        build-args: |
-          MODEL_NAME=google/flan-t5-small
+      - name: Login to SAP
+        env:
+          SAP_CLIENT_ID: ${{ secrets.SAP_CLIENT_ID }}
+          SAP_CLIENT_SECRET: ${{ secrets.SAP_CLIENT_SECRET }}
+        run: |
+          pip install sap-ai-core-sdk
+          sapcli login --client-id "$SAP_CLIENT_ID" --client-secret "$SAP_CLIENT_SECRET"
 
-    - name: Deploy to SAP AI Core
-      env:
-        SAP_CLIENT_ID: ${{ secrets.SAP_CLIENT_ID }}
-        SAP_CLIENT_SECRET: ${{ secrets.SAP_CLIENT_SECRET }}
-        SAP_SERVICE_KEY: ${{ secrets.SAP_SERVICE_KEY }}
-        SAP_RESOURCE_GROUP: ${{ secrets.SAP_RESOURCE_GROUP }}
-      run: |
-        pip install sap-ai-core-sdk
-        echo "$SAP_SERVICE_KEY" > service_key.json
-        sapcli login --client-id "$SAP_CLIENT_ID" --client-secret "$SAP_CLIENT_SECRET"
-        sapcli config set --resource-group "$SAP_RESOURCE_GROUP"
-        sapcli deployment create -f sap-deployment/serving.yaml
-        sapcli deployment list
+      - name: Deploy to SAP AI Core
+        run: |
+          sapcli deployment create -f sap-deployment/serving.yaml

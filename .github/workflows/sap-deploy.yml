@@ -8,31 +8,32 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
-      # 1. Checkout repository
+      # 1️⃣ Checkout repo
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # 2. Log in to GitHub Container Registry
-      - name: Log in to GitHub Container Registry
+      # 2️⃣ Log in to GitHub Container Registry
+      - name: Log in to GHCR
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ secrets.GHCR_USERNAME }}
           password: ${{ secrets.GHCR_PAT }}
 
-      # 3. Deploy to SAP AI Core
+      # 3️⃣ Deploy to SAP AI Core
       - name: Deploy to SAP AI Core
         env:
           SAP_CLIENT_ID: ${{ secrets.SAP_CLIENT_ID }}
           SAP_CLIENT_SECRET: ${{ secrets.SAP_CLIENT_SECRET }}
           SAP_AUTH_URL: ${{ secrets.SAP_AUTH_URL }}
           SAP_API_URL: ${{ secrets.SAP_API_URL }}
+          SAP_SERVICE_KEY: ${{ secrets.SAP_SERVICE_KEY }}
         run: |
-          # Install jq (needed to parse JSON)
           sudo apt-get update && sudo apt-get install -y jq
 
-          # 1. Get access token from SAP
+          # Get SAP access token
           TOKEN=$(curl -s --request POST \
             --url "$SAP_AUTH_URL/oauth/token" \
             --header "Content-Type: application/x-www-form-urlencoded" \
@@ -41,8 +42,10 @@ jobs:
 
           echo "Access token retrieved successfully"
 
-          # 2. Deploy serving.yaml to AI Core
+          # Deploy ServingTemplate
           curl -X POST "$SAP_API_URL/v2/deployments" \
             -H "Authorization: Bearer $TOKEN" \
             -H "Content-Type: multipart/form-data" \
             -F "file=@sap-deployment/serving.yaml"
+
+          echo "Deployment request submitted successfully"

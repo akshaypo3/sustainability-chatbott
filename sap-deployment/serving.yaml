@@ -12,17 +12,17 @@ metadata:
     ai.sap.com/version: "1.0.0"
 spec:
   template:
-    apiVersion: "serving.kserve.io/v1beta1"
+    apiVersion: serving.kserve.io/v1beta1
     metadata:
-      annotations: |
+      annotations:
         autoscaling.knative.dev/minScale: "1"
         autoscaling.knative.dev/maxScale: "2"
-      labels: |
+      labels:
         ai.sap.com/resourcePlan: infer.s
-    spec: |
+    spec:
       predictor:
         imagePullSecrets:
-          - name: ghcr
+          - name: ghcr   # must match the Docker secret in SAP AI Core
         minReplicas: 1
         maxReplicas: 2
         containers:

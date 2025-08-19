@@ -9,9 +9,11 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      # 1. Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      # 2. Log in to GitHub Container Registry
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v2
         with:
@@ -19,6 +21,7 @@ jobs:
           username: ${{ secrets.GHCR_USERNAME }}
           password: ${{ secrets.GHCR_PAT }}
 
+      # 3. Deploy to SAP AI Core
       - name: Deploy to SAP AI Core
         env:
           SAP_CLIENT_ID: ${{ secrets.SAP_CLIENT_ID }}
@@ -43,4 +46,3 @@ jobs:
             -H "Authorization: Bearer $TOKEN" \
             -H "Content-Type: multipart/form-data" \
             -F "file=@sap-deployment/serving.yaml"
-

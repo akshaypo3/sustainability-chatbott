@@ -2,27 +2,18 @@ apiVersion: ai.sap.com/v1alpha1
 kind: ServingTemplate
 metadata:
   name: sustainability-chatbot
-  annotations:
-    scenarios.ai.sap.com/description: "Sustainability Chatbot using FLAN-T5"
-    scenarios.ai.sap.com/name: "sustainability"
-    executables.ai.sap.com/description: "Sustainability chatbot service"
-    executables.ai.sap.com/name: "sustainability-chatbot"
-  labels:
-    scenarios.ai.sap.com/id: "sustainability"
-    ai.sap.com/version: "1.0.0"
-spec:
+  annotations: "scenarios.ai.sap.com/description=Sustainability Chatbot using FLAN-T5, scenarios.ai.sap.com/name=sustainability, executables.ai.sap.com/description=Sustainability chatbot service, executables.ai.sap.com/name=sustainability-chatbot"
+  labels: "scenarios.ai.sap.com/id=sustainability, ai.sap.com/version=1.0.0"
+spec: |
   template:
     apiVersion: serving.kserve.io/v1beta1
     metadata:
-      annotations:
-        autoscaling.knative.dev/minScale: "1"
-        autoscaling.knative.dev/maxScale: "2"
-      labels:
-        ai.sap.com/resourcePlan: infer.s
+      annotations: "autoscaling.knative.dev/minScale=1, autoscaling.knative.dev/maxScale=2"
+      labels: "ai.sap.com/resourcePlan=infer.s"
     spec:
       predictor:
         imagePullSecrets:
-          - name: ghcr   # must match the Docker secret in SAP AI Core
+          - name: ghcr
         minReplicas: 1
         maxReplicas: 2
         containers:

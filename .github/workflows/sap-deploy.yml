@@ -9,18 +9,11 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-
+    
     steps:
     - uses: actions/checkout@v4
 
-    - name: Log in to GitHub Container Registry
-      uses: docker/login-action@v2
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Build & Push Docker Image
+    - name: Build Docker Image
       uses: docker/build-push-action@v4
       with:
         context: ./sap-deployment
@@ -33,7 +26,7 @@ jobs:
         SAP_CLIENT_SECRET: ${{ secrets.SAP_CLIENT_SECRET }}
         SAP_SERVICE_KEY: ${{ secrets.SAP_SERVICE_KEY }}
       run: |
-        pip install aicore --quiet
+        pip install sap-ai-core-sdk --quiet
         echo "$SAP_SERVICE_KEY" > service_key.json
-        aicore login --client-id "$SAP_CLIENT_ID" --client-secret "$SAP_CLIENT_SECRET" --service-key service_key.json
-        aicore deployment create -f sap-deployment/serving.yaml
+        ai-core-cli login --client-id "$SAP_CLIENT_ID" --client-secret "$SAP_CLIENT_SECRET" --service-key service_key.json
+        ai-core-cli deployment create -f sap-deployment/serving.yaml

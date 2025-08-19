@@ -35,6 +35,8 @@ jobs:
       run: |
         pip install aicore --quiet
         echo "$SAP_SERVICE_KEY" > service_key.json
-        aicore login --client-id "$SAP_CLIENT_ID" --client-secret "$SAP_CLIENT_SECRET" --service-key service_key.json
+        aicore login \
+          --client-id "$SAP_CLIENT_ID" \
+          --client-secret "$SAP_CLIENT_SECRET" \
+          --service-key service_key.json
         aicore deployment create -f sap-deployment/serving.yaml
-

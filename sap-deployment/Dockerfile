@@ -8,16 +8,16 @@ RUN apt-get update && apt-get install -y \
     g++ \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first
+# Copy requirements
 COPY requirements.txt .
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install flask==2.3.2 transformers==4.30.2 torch --extra-index-url https://download.pytorch.org/whl/cpu accelerate sentencepiece protobuf
 
 # Copy app code
 COPY app.py .
 
 EXPOSE 5000
 
-# Use simple command (no gunicorn for now)
-CMD ["python", "app.py"]
+# Add delay for SAP AI Core startup
+CMD sleep 10 && python app.py

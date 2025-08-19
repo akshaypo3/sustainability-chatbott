@@ -1,35 +1,38 @@
 apiVersion: ai.sap.com/v1alpha1
-kind: Serving
+kind: ServingTemplate
 metadata:
   name: sustainability-chatbot
   annotations:
-    ai.sap.com/description: "Sustainability Chatbot using FLAN-T5"
+    scenarios.ai.sap.com/description: "Sustainability Chatbot using FLAN-T5"
+    scenarios.ai.sap.com/name: "sustainability"
+    executables.ai.sap.com/description: "Sustainability chatbot service"
+    executables.ai.sap.com/name: "sustainability-chatbot"
+  labels:
+    scenarios.ai.sap.com/id: "sustainability"
     ai.sap.com/version: "1.0.0"
-    ai.sap.com/author: "Akshay Poojary"
 spec:
   template:
-    apiVersion: serving.kserve.io/v1beta1
+    apiVersion: "serving.kserve.io/v1beta1"
     metadata:
-      annotations:
+      annotations: |
         autoscaling.knative.dev/minScale: "1"
-        autoscaling.knative.dev/maxScale: "3"
-    spec:
+        autoscaling.knative.dev/maxScale: "2"
+      labels: |
+        ai.sap.com/resourcePlan: infer.s
+    spec: |
       predictor:
+        imagePullSecrets:
+          - name: ghcr
+        minReplicas: 1
+        maxReplicas: 2
         containers:
-        - name: kserve-container
-          image: ghcr.io/akshaypo3/sustainability-sap-backend:latest
-          ports:
-            - containerPort: 5000
-              protocol: TCP
-          env:
-            - name: PORT
-              value: "5000"
-            - name: MODEL_NAME
-              value: "google/flan-t5-small"
-          resources:
-            limits:
-              cpu: "2"
-              memory: 4Gi
-            requests:
-              cpu: "1"
-              memory: 2Gi
+          - name: kserve-container
+            image: ghcr.io/akshaypo3/sustainability-sap-backend:latest
+            ports:
+              - containerPort: 5000
+                protocol: TCP
+            env:
+              - name: PORT
+                value: "5000"
+              - name: MODEL_NAME
+                value: "google/flan-t5-small"

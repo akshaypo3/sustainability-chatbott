@@ -1,38 +1,34 @@
-name: SAP AI Core Deployment
+name: Build & Push backend image
 
 on:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
+    paths:
+      - 'sap-deployment/**'
 
 jobs:
-  deploy:
+  push-image:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write  # needed to push to GHCR
+    env:
+      IMAGE_TAG: ghcr.io/akshaypo3/sustainability-sap-backend:latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Deploy to SAP AI Core
-        env:
-          SAP_CLIENT_ID: ${{ secrets.SAP_CLIENT_ID }}
-          SAP_CLIENT_SECRET: ${{ secrets.SAP_CLIENT_SECRET }}
-          SAP_AUTH_URL: ${{ secrets.SAP_AUTH_URL }}
-          SAP_API_URL: ${{ secrets.SAP_API_URL }}
-        run: |
-          # Install jq (needed to parse JSON)
-          sudo apt-get update && sudo apt-get install -y jq
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-          # 1. Get access token
-          TOKEN=$(curl -s --request POST \
-            --url "$SAP_AUTH_URL/oauth/token" \
-            --header "Content-Type: application/x-www-form-urlencoded" \
-            --data "grant_type=client_credentials&client_id=$SAP_CLIENT_ID&client_secret=$SAP_CLIENT_SECRET" \
-            | jq -r .access_token)
-
-          echo "Access token retrieved successfully"
-
-          # 2. Deploy serving.yaml to AI Core
-          curl -X POST "$SAP_API_URL/v2/deployments" \
-            -H "Authorization: Bearer $TOKEN" \
-            -H "Content-Type: multipart/form-data" \
-            -F "file=@sap-deployment/serving.yaml"
+      - name: Build & Push
+        uses: docker/build-push-action@v6
+        with:
+          context: ./sap-deployment
+          push: true
+          tags: ${{ env.IMAGE_TAG }}
+          platforms: linux/amd64

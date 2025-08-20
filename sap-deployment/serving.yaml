@@ -7,6 +7,9 @@ metadata:
     "scenarios.ai.sap.com/name": "Sustainability"
     "executables.ai.sap.com/description": "Sustainability chatbot service"
     "executables.ai.sap.com/name": "sustainability-chatbot"
+    # ADD TIMEOUT ANNOTATIONS:
+    "serving.kserve.io/deploymentTimeout": "600"
+    "serving.kserve.io/responseTimeout": "300"
   labels:
     "scenarios.ai.sap.com/id": "sustainability"
     "ai.sap.com/version": "1.0.0"
@@ -31,5 +34,11 @@ spec:
             value: "5000"
           - name: MODEL_NAME
             value: "google/flan-t5-small"
-        imagePullSecrets:
-        - name: ghcr
+          resources:
+            requests:
+              memory: "2Gi"
+              cpu: "1"
+            limits:
+              memory: "4Gi"
+              cpu: "2"
+        # REMOVE imagePullSecrets ENTIRELY!

@@ -22,7 +22,7 @@ spec:
         maxReplicas: 2
         containers:
         - name: kserve-container
-          image: ghcr.io/akshaypo3/sustainability-chatbott:light
+          image: ghcr.io/akshaypo3/sustainability-chatbott:light-cpu
           ports:
           - containerPort: 5000
             protocol: TCP

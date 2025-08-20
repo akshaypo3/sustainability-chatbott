@@ -20,25 +20,27 @@ spec:
     metadata:
       name: sustainability-chatbot
     spec: |
-      predictor:
-        minReplicas: 1
-        maxReplicas: 2
-        containers:
-        - name: kserve-container
-          image: ghcr.io/akshaypo3/sustainability-chatbott:light-cpu
-          ports:
-          - containerPort: 5000
-            protocol: TCP
-          env:
-          - name: PORT
-            value: "5000"
-          - name: MODEL_NAME
-            value: "google/flan-t5-small"
-          resources:
-            requests:
-              memory: "2Gi"
-              cpu: "1"
-            limits:
-              memory: "4Gi"
-              cpu: "2"
-        # REMOVE imagePullSecrets ENTIRELY!
+  predictor:
+    minReplicas: 1
+    maxReplicas: 2
+    containers:
+    - name: kserve-container
+      image: ghcr.io/akshaypo3/sustainability-chatbott:light-cpu
+      ports:
+      - containerPort: 5000
+        protocol: TCP
+      env:
+      - name: PORT
+        value: "5000"
+      - name: MODEL_NAME
+        value: "google/flan-t5-small"
+      resources:
+        requests:
+          memory: "2Gi"
+          cpu: "1"
+        limits:
+          memory: "4Gi"
+          cpu: "2"
+    # REMOVE THIS ENTIRE SECTION:
+    # imagePullSecrets:
+    # - name: ghcr

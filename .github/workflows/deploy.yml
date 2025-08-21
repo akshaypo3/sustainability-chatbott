@@ -27,14 +27,12 @@ jobs:
         push: true
         tags: ghcr.io/akshaypo3/sustainability-chatbott:light-cpu
 
-    - name: Setup Python and Install Dependencies
+    - name: Install dependencies for SAP API call
       run: |
         sudo apt-get update
         sudo apt-get install -y jq curl
-        python -m pip install --upgrade pip
-        pip install sap-ai-core-sdk
 
-    - name: Deploy to SAP AI Core
+    - name: Deploy to SAP AI Core via API
       env:
         SAP_CLIENT_ID: ${{ secrets.SAP_CLIENT_ID }}
         SAP_CLIENT_SECRET: ${{ secrets.SAP_CLIENT_SECRET }}
@@ -42,15 +40,37 @@ jobs:
         SAP_API_URL: ${{ secrets.SAP_API_URL }}
       run: |
         # Get authentication token
-        TOKEN=$(curl -s -X POST "$SAP_AUTH_URL/oauth/token" \
+        echo "Getting SAP authentication token..."
+        TOKEN_RESPONSE=$(curl -s -X POST "$SAP_AUTH_URL/oauth/token" \
           -H "Content-Type: application/x-www-form-urlencoded" \
-          -d "grant_type=client_credentials&client_id=$SAP_CLIENT_ID&client_secret=$SAP_CLIENT_SECRET" \
-          | jq -r '.access_token')
+          -d "grant_type=client_credentials&client_id=$SAP_CLIENT_ID&client_secret=$SAP_CLIENT_SECRET")
         
-        # Deploy to SAP AI Core
-        curl -X POST "$SAP_API_URL/v2/lm/servingtemplates" \
+        TOKEN=$(echo $TOKEN_RESPONSE | jq -r '.access_token')
+        
+        if [ "$TOKEN" = "null" ] || [ -z "$TOKEN" ]; then
+          echo "Error: Failed to get access token"
+          echo "Response: $TOKEN_RESPONSE"
+          exit 1
+        fi
+        
+        echo "Successfully obtained SAP token"
+        
+        # Deploy to SAP AI Core using the correct endpoint
+        echo "Deploying serving template to SAP AI Core..."
+        DEPLOY_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$SAP_API_URL/v2/lm/servingtemplates" \
           -H "Authorization: Bearer $TOKEN" \
           -H "Content-Type: multipart/form-data" \
-          -F "file=@sap-deployment/serving.yaml"
+          -F "file=@sap-deployment/serving.yaml")
         
-        echo "Deployment request sent to SAP AI Core"
+        HTTP_CODE=$(echo "$DEPLOY_RESPONSE" | tail -n1)
+        RESPONSE_BODY=$(echo "$DEPLOY_RESPONSE" | sed '$d')
+        
+        echo "HTTP Status Code: $HTTP_CODE"
+        echo "Response: $RESPONSE_BODY"
+        
+        if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+          echo "✅ Deployment successful!"
+        else
+          echo "❌ Deployment failed with status code $HTTP_CODE"
+          exit 1
+        fi

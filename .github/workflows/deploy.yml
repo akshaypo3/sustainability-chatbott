@@ -13,19 +13,26 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Build Docker Image
-      uses: docker/build-push-action@v4
-      with:
-        context: ./sap-deployment
-        push: true
-        tags: ghcr.io/akshaypo3/sustainability-chatbott:light-cpu
-
     - name: Login to GitHub Container Registry
       uses: docker/login-action@v2
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build and Push Docker Image
+      uses: docker/build-push-action@v4
+      with:
+        context: ./sap-deployment
+        push: true
+        tags: ghcr.io/akshaypo3/sustainability-chatbott:light-cpu
+
+    - name: Setup Python and Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y jq curl
+        python -m pip install --upgrade pip
+        pip install sap-ai-core-sdk
 
     - name: Deploy to SAP AI Core
       env:
@@ -34,13 +41,16 @@ jobs:
         SAP_AUTH_URL: ${{ secrets.SAP_AUTH_URL }}
         SAP_API_URL: ${{ secrets.SAP_API_URL }}
       run: |
-        sudo apt-get update && sudo apt-get install -y jq curl
+        # Get authentication token
         TOKEN=$(curl -s -X POST "$SAP_AUTH_URL/oauth/token" \
           -H "Content-Type: application/x-www-form-urlencoded" \
           -d "grant_type=client_credentials&client_id=$SAP_CLIENT_ID&client_secret=$SAP_CLIENT_SECRET" \
           | jq -r '.access_token')
-        curl -X POST "$SAP_API_URL/v2/deployments" \
+        
+        # Deploy to SAP AI Core
+        curl -X POST "$SAP_API_URL/v2/lm/servingtemplates" \
           -H "Authorization: Bearer $TOKEN" \
           -H "Content-Type: multipart/form-data" \
-          -F "file=@sap-deployment/serving-template.yaml"
+          -F "file=@sap-deployment/serving.yaml"
+        
         echo "Deployment request sent to SAP AI Core"

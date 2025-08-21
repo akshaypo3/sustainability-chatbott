@@ -18,7 +18,9 @@ spec:
     kind: InferenceService
     metadata:
       name: sustainability-chatbot
-    spec: |
+      annotations:
+        serving.kserve.io/deploymentMode: Serverless
+    spec:
       predictor:
         minReplicas: 1
         maxReplicas: 2

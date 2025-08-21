@@ -1,4 +1,4 @@
-name: Build and Deploy to SAP AI Core
+name: SAP AI Core Deployment
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
       - 'sap-deployment/**'
 
 jobs:
-  build-and-deploy:
+  sap-deploy:
     runs-on: ubuntu-latest
     
     steps:
@@ -27,12 +27,10 @@ jobs:
         push: true
         tags: ghcr.io/akshaypo3/sustainability-chatbott:light-cpu
 
-    - name: Install dependencies for SAP API call
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y jq curl
+    - name: Install required tools
+      run: sudo apt-get update && sudo apt-get install -y curl jq
 
-    - name: Deploy to SAP AI Core via API
+    - name: Deploy to SAP AI Core
       env:
         SAP_CLIENT_ID: ${{ secrets.SAP_CLIENT_ID }}
         SAP_CLIENT_SECRET: ${{ secrets.SAP_CLIENT_SECRET }}
@@ -45,25 +43,26 @@ jobs:
           -H "Content-Type: application/x-www-form-urlencoded" \
           -d "grant_type=client_credentials&client_id=$SAP_CLIENT_ID&client_secret=$SAP_CLIENT_SECRET")
         
-        TOKEN=$(echo $TOKEN_RESPONSE | jq -r '.access_token')
+        TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.access_token')
         
         if [ "$TOKEN" = "null" ] || [ -z "$TOKEN" ]; then
-          echo "Error: Failed to get access token"
+          echo "❌ Failed to get access token"
           echo "Response: $TOKEN_RESPONSE"
           exit 1
         fi
         
-        echo "Successfully obtained SAP token"
+        echo "✅ Successfully obtained SAP token"
         
-        # Deploy to SAP AI Core using the correct endpoint
-        echo "Deploying serving template to SAP AI Core..."
-        DEPLOY_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$SAP_API_URL/v2/lm/servingtemplates" \
+        # Deploy serving template
+        echo "Deploying to SAP AI Core..."
+        DEPLOY_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+          "$SAP_API_URL/v2/lm/servingtemplates" \
           -H "Authorization: Bearer $TOKEN" \
           -H "Content-Type: multipart/form-data" \
           -F "file=@sap-deployment/serving.yaml")
         
         HTTP_CODE=$(echo "$DEPLOY_RESPONSE" | tail -n1)
-        RESPONSE_BODY=$(echo "$DEPLOY_RESPONSE" | sed '$d')
+        RESPONSE_BODY=$(echo "$DEPLOY_RESPONSE" | head -n -1)
         
         echo "HTTP Status Code: $HTTP_CODE"
         echo "Response: $RESPONSE_BODY"

@@ -1,51 +1,37 @@
-name: SAP AI Core Deployment
+name: Build and Deploy to SAP AI Core
 
 on:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
+    paths:
+      - 'sap-deployment/**'
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
-
+    
     steps:
-      # 1️⃣ Checkout repo
-      - name: Checkout repository
-        uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
-      # 2️⃣ Log in to GitHub Container Registry
-      - name: Log in to GHCR
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ secrets.GHCR_USERNAME }}
-          password: ${{ secrets.GHCR_PAT }}
+    - name: Build Docker Image
+      uses: docker/build-push-action@v4
+      with:
+        context: ./sap-deployment
+        push: true
+        tags: ghcr.io/akshaypo3/sustainability-chatbott:light-cpu  
 
-      # 3️⃣ Deploy to SAP AI Core
-      - name: Deploy to SAP AI Core
-        env:
-          SAP_CLIENT_ID: ${{ secrets.SAP_CLIENT_ID }}
-          SAP_CLIENT_SECRET: ${{ secrets.SAP_CLIENT_SECRET }}
-          SAP_AUTH_URL: ${{ secrets.SAP_AUTH_URL }}
-          SAP_API_URL: ${{ secrets.SAP_API_URL }}
-          SAP_SERVICE_KEY: ${{ secrets.SAP_SERVICE_KEY }}
-        run: |
-          sudo apt-get update && sudo apt-get install -y jq
-
-          # Get SAP access token
-          TOKEN=$(curl -s --request POST \
-            --url "$SAP_AUTH_URL/oauth/token" \
-            --header "Content-Type: application/x-www-form-urlencoded" \
-            --data "grant_type=client_credentials&client_id=$SAP_CLIENT_ID&client_secret=$SAP_CLIENT_SECRET" \
-            | jq -r .access_token)
-
-          echo "Access token retrieved successfully"
-
-          # Deploy ServingTemplate
-          curl -X POST "$SAP_API_URL/v2/deployments" \
-            -H "Authorization: Bearer $TOKEN" \
-            -H "Content-Type: multipart/form-data" \
-            -F "file=@sap-deployment/serving.yaml"
-
-          echo "Deployment request submitted successfully"
+    - name: Deploy to SAP AI Core
+      env:
+        SAP_CLIENT_ID: ${{ secrets.SAP_CLIENT_ID }}
+        SAP_CLIENT_SECRET: ${{ secrets.SAP_CLIENT_SECRET }}
+        SAP_AUTH_URL: ${{ secrets.SAP_AUTH_URL }}  
+        SAP_API_URL: ${{ secrets.SAP_API_URL }}    
+      run: |
+        # Install SAP CLI
+        pip install sap-ai-core-sdk
+        
+        # Login to SAP
+        sapcli login --client-id "$SAP_CLIENT_ID" --client-secret "$SAP_CLIENT_SECRET" --auth-url "$SAP_AUTH_URL" --api-url "$SAP_API_URL"
+        
+        # Deploy with correct filename
+        sapcli deployment create -f sap-deployment/serving-template.yaml  # ← FIXED FILENAME

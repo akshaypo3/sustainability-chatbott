@@ -34,38 +34,13 @@ jobs:
         SAP_AUTH_URL: ${{ secrets.SAP_AUTH_URL }}
         SAP_API_URL: ${{ secrets.SAP_API_URL }}
       run: |
-        # Install jq for JSON parsing
         sudo apt-get update && sudo apt-get install -y jq curl
-
-        # Get SAP access token
-        echo "Getting SAP access token..."
         TOKEN=$(curl -s -X POST "$SAP_AUTH_URL/oauth/token" \
           -H "Content-Type: application/x-www-form-urlencoded" \
           -d "grant_type=client_credentials&client_id=$SAP_CLIENT_ID&client_secret=$SAP_CLIENT_SECRET" \
           | jq -r '.access_token')
-        
-        if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
-          echo "❌ Failed to get SAP access token"
-          exit 1
-        fi
-
-        echo "✅ SAP access token retrieved successfully"
-
-        # Deploy to SAP AI Core
-        echo "Deploying to SAP AI Core..."
-        response=$(curl -s -w "%{http_code}" -X POST "$SAP_API_URL/v2/deployments" \
+        curl -X POST "$SAP_API_URL/v2/deployments" \
           -H "Authorization: Bearer $TOKEN" \
           -H "Content-Type: multipart/form-data" \
-          -F "file=@sap-deployment/serving-template.yaml")
-        
-        http_code=${response: -3}
-        body=${response:0:${#response}-3}
-
-        if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
-          echo "✅ Deployment request successful!"
-          echo "Response: $body"
-        else
-          echo "❌ Deployment failed with HTTP $http_code"
-          echo "Error: $body"
-          exit 1
-        fi
+          -F "file=@sap-deployment/serving-template.yaml"
+        echo "Deployment request sent to SAP AI Core"

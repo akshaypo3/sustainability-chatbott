@@ -18,20 +18,54 @@ jobs:
       with:
         context: ./sap-deployment
         push: true
-        tags: ghcr.io/akshaypo3/sustainability-chatbott:light-cpu  
+        tags: ghcr.io/akshaypo3/sustainability-chatbott:light-cpu
+
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Deploy to SAP AI Core
       env:
         SAP_CLIENT_ID: ${{ secrets.SAP_CLIENT_ID }}
         SAP_CLIENT_SECRET: ${{ secrets.SAP_CLIENT_SECRET }}
-        SAP_AUTH_URL: ${{ secrets.SAP_AUTH_URL }}  
-        SAP_API_URL: ${{ secrets.SAP_API_URL }}    
+        SAP_AUTH_URL: ${{ secrets.SAP_AUTH_URL }}
+        SAP_API_URL: ${{ secrets.SAP_API_URL }}
       run: |
-        # Install SAP CLI
-        pip install sap-ai-core-sdk
+        # Install jq for JSON parsing
+        sudo apt-get update && sudo apt-get install -y jq curl
+
+        # Get SAP access token
+        echo "Getting SAP access token..."
+        TOKEN=$(curl -s -X POST "$SAP_AUTH_URL/oauth/token" \
+          -H "Content-Type: application/x-www-form-urlencoded" \
+          -d "grant_type=client_credentials&client_id=$SAP_CLIENT_ID&client_secret=$SAP_CLIENT_SECRET" \
+          | jq -r '.access_token')
         
-        # Login to SAP
-        sapcli login --client-id "$SAP_CLIENT_ID" --client-secret "$SAP_CLIENT_SECRET" --auth-url "$SAP_AUTH_URL" --api-url "$SAP_API_URL"
+        if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+          echo "❌ Failed to get SAP access token"
+          exit 1
+        fi
+
+        echo "✅ SAP access token retrieved successfully"
+
+        # Deploy to SAP AI Core
+        echo "Deploying to SAP AI Core..."
+        response=$(curl -s -w "%{http_code}" -X POST "$SAP_API_URL/v2/deployments" \
+          -H "Authorization: Bearer $TOKEN" \
+          -H "Content-Type: multipart/form-data" \
+          -F "file=@sap-deployment/serving-template.yaml")
         
-        # Deploy with correct filename
-        sapcli deployment create -f sap-deployment/serving-template.yaml  # ← FIXED FILENAME
+        http_code=${response: -3}
+        body=${response:0:${#response}-3}
+
+        if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
+          echo "✅ Deployment request successful!"
+          echo "Response: $body"
+        else
+          echo "❌ Deployment failed with HTTP $http_code"
+          echo "Error: $body"
+          exit 1
+        fi

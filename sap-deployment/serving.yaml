@@ -7,7 +7,7 @@ metadata:
   labels:
     scenarios.ai.sap.com.id: "sustainability"
 spec:
-  template: |
+  template:
     apiVersion: serving.kserve.io/v1beta1
     kind: InferenceService
     metadata:
@@ -15,10 +15,10 @@ spec:
     spec:
       predictor:
         containers:
-        - name: kserve-container
-          image: ghcr.io/akshaypo3/sustainability-chatbott:light-cpu
-          ports:
-          - containerPort: 5000
-          env:
-          - name: PORT
-            value: "5000"
+          - name: kserve-container
+            image: ghcr.io/akshaypo3/sustainability-chatbott:light-cpu
+            ports:
+              - containerPort: 5000
+            env:
+              - name: PORT
+                value: "5000"

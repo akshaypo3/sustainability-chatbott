@@ -17,13 +17,13 @@ def load_model():
     """Load the model pipeline"""
     global chatbot
     try:
-        model_name = os.getenv('MODEL_NAME', 'google/flan-t5-base')
+        model_name = os.getenv('MODEL_NAME', 'google/flan-t5-base')  # Using base for better answers
         logger.info(f"Loading model: {model_name}")
         
         chatbot = pipeline(
             'text2text-generation', 
             model=model_name,
-            device=-1
+            device=-1  # Use CPU
         )
         logger.info("Model loaded successfully")
     except Exception as e:
@@ -84,33 +84,43 @@ def chat():
                 "topic_restriction": "sustainability_only"
             })
         
-        # Cleaner prompt without numbered list that gets included in response
-        prompt = f"""As a sustainability expert, provide a comprehensive answer to: {question}
+        # Optimized prompt for professional sustainability answers
+        prompt = f"""As a Senior Sustainability Consultant with expertise in environmental science, provide a comprehensive professional answer to this question: "{question}"
 
-Focus on:
-- Clear explanations and definitions
-- Environmental benefits and impacts
-- Practical applications and examples
-- Importance for sustainable development
-- Future trends and outlook
+Please structure your response with:
+1. Clear definition and context
+2. Environmental impact and significance
+3. Practical applications and real-world examples
+4. Benefits for sustainable development
+5. Current trends and future outlook
 
-Provide a professional, detailed response:"""
+Ensure the answer is:
+- Professionally toned and expert-level
+- Factually accurate and evidence-based
+- Focused on environmental sustainability
+- Comprehensive yet accessible
+- 150-300 words in length
+
+Professional sustainability analysis:"""
         
-        # Generate response
+        # Generate response with optimized parameters
         response = chatbot(
             prompt,
-            max_length=300,
-            min_length=50,
+            max_length=500,
+            min_length=150,
             do_sample=True,
             temperature=0.7,
             top_p=0.9,
-            repetition_penalty=1.2
+            top_k=50,
+            repetition_penalty=1.2,
+            num_beams=4,
+            early_stopping=True
         )
         
         answer = response[0]['generated_text'].strip()
         
         # Clean up the response
-        answer = re.sub(r'(Professional response:|Answer:|Response:|sustainability expert)', '', answer, flags=re.IGNORECASE)
+        answer = re.sub(r'(Professional sustainability analysis:|Answer:|Response:)', '', answer, flags=re.IGNORECASE)
         answer = answer.strip()
         
         logger.info(f"Generated answer: {answer}")
@@ -118,7 +128,8 @@ Provide a professional, detailed response:"""
         return jsonify({
             "question": question,
             "answer": answer,
-            "topic": "sustainability"
+            "topic": "sustainability",
+            "response_length": len(answer)
         })
         
     except Exception as e:
@@ -126,4 +137,4 @@ Provide a professional, detailed response:"""
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)#

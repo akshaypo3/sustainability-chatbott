@@ -2,6 +2,7 @@ from flask import Flask, jsonify, request
 from transformers import pipeline
 import os
 import logging
+import re
 
 app = Flask(__name__)
 
@@ -16,25 +17,34 @@ def load_model():
     """Load the model pipeline"""
     global chatbot
     try:
-        model_name = os.getenv('MODEL_NAME', 'google/flan-t5-small')
+        model_name = os.getenv('MODEL_NAME', 'google/flan-t5-base')  # Using base for better answers
         logger.info(f"Loading model: {model_name}")
         
         chatbot = pipeline(
             'text2text-generation', 
             model=model_name,
-            device=-1  # Use CPU (-1 for CPU, 0 for GPU)
+            device=-1  # Use CPU
         )
         logger.info("Model loaded successfully")
     except Exception as e:
         logger.error(f"Error loading model: {e}")
         raise
 
-@app.before_request
-def before_request():
-    """Load model before first request"""
-    global chatbot
-    if chatbot is None:
-        load_model()
+# Load model when module is imported
+load_model()
+
+def is_sustainability_related(question):
+    """Check if question is related to sustainability"""
+    sustainability_keywords = [
+        'sustainab', 'environment', 'eco', 'green', 'renewable', 'carbon', 'climate',
+        'energy', 'recycle', 'waste', 'pollution', 'conservation', 'biodiversity',
+        'solar', 'wind', 'hydro', 'geothermal', 'organic', 'compost', 'emission',
+        'electric vehicle', 'ev', 'zero waste', 'circular economy', 'green building',
+        'sustainable development', 'clean energy', 'carbon footprint', 'global warming'
+    ]
+    
+    question_lower = question.lower()
+    return any(keyword in question_lower for keyword in sustainability_keywords)
 
 @app.route('/health')
 def health():
@@ -43,9 +53,10 @@ def health():
 @app.route('/')
 def home():
     return jsonify({
-        "message": "Sustainability Chatbot API",
-        "model": os.getenv('MODEL_NAME', 'google/flan-t5-small'),
-        "endpoints": ["/health", "/chat", "/"]
+        "message": "Sustainability Expert Chatbot API",
+        "model": os.getenv('MODEL_NAME', 'google/flan-t5-base'),
+        "endpoints": ["/health", "/chat", "/"],
+        "specialization": "Sustainability and Environmental topics only"
     })
 
 @app.route('/chat', methods=['POST'])
@@ -59,26 +70,66 @@ def chat():
         if not data:
             return jsonify({"error": "No JSON data provided"}), 400
             
-        question = data.get('question', '')
+        question = data.get('question', '').strip()
         if not question:
             return jsonify({"error": "No question provided"}), 400
         
         logger.info(f"Received question: {question}")
         
-        # Generate response
+        # Check if question is sustainability-related
+        if not is_sustainability_related(question):
+            return jsonify({
+                "question": question,
+                "answer": "I specialize only in sustainability and environmental topics. Please ask me about renewable energy, climate change, recycling, green technology, or other environmental subjects.",
+                "topic_restriction": "sustainability_only"
+            })
+        
+        # Optimized prompt for professional sustainability answers
+        prompt = f"""As a Senior Sustainability Consultant with expertise in environmental science, provide a comprehensive professional answer to this question: "{question}"
+
+Please structure your response with:
+1. Clear definition and context
+2. Environmental impact and significance
+3. Practical applications and real-world examples
+4. Benefits for sustainable development
+5. Current trends and future outlook
+
+Ensure the answer is:
+- Professionally toned and expert-level
+- Factually accurate and evidence-based
+- Focused on environmental sustainability
+- Comprehensive yet accessible
+- 150-300 words in length
+
+Professional sustainability analysis:"""
+        
+        # Generate response with optimized parameters
         response = chatbot(
-            f"Answer this sustainability question: {question}",
-            max_length=200,
+            prompt,
+            max_length=500,
+            min_length=150,
             do_sample=True,
-            temperature=0.7
+            temperature=0.7,
+            top_p=0.9,
+            top_k=50,
+            repetition_penalty=1.2,
+            num_beams=4,
+            early_stopping=True
         )
         
-        answer = response[0]['generated_text']
+        answer = response[0]['generated_text'].strip()
+        
+        # Clean up the response
+        answer = re.sub(r'(Professional sustainability analysis:|Answer:|Response:)', '', answer, flags=re.IGNORECASE)
+        answer = answer.strip()
+        
         logger.info(f"Generated answer: {answer}")
         
         return jsonify({
             "question": question,
-            "answer": answer
+            "answer": answer,
+            "topic": "sustainability",
+            "response_length": len(answer)
         })
         
     except Exception as e:
@@ -86,6 +137,4 @@ def chat():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    # Load model when starting in development mode
-    load_model()
     app.run(host='0.0.0.0', port=5000, debug=True)

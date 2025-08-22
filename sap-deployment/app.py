@@ -84,34 +84,37 @@ def chat():
                 "topic_restriction": "sustainability_only"
             })
         
-        # Cleaner prompt without numbered list that gets included in response
-        prompt = f"""As a sustainability expert, provide a comprehensive answer to: {question}
+        # Better prompt to avoid repetition
+        prompt = f"""Please provide a clear and concise answer about sustainability:
 
-Focus on:
-- Clear explanations and definitions
+Question: {question}
+
+Answer in 2-3 sentences focusing on:
+- What it is and why it matters
 - Environmental benefits and impacts
-- Practical applications and examples
-- Importance for sustainable development
-- Future trends and outlook
+- Practical examples and applications
 
-Provide a professional, detailed response:"""
+Keep the response focused and avoid repetition:"""
         
-        # Generate response
+        # Generate response with better parameters to avoid repetition
         response = chatbot(
             prompt,
-            max_length=300,
-            min_length=50,
+            max_length=150,  # Shorter to avoid rambling
+            min_length=30,
             do_sample=True,
-            temperature=0.7,
-            top_p=0.9,
-            repetition_penalty=1.2
+            temperature=0.8,  # Slightly more creative
+            top_p=0.92,
+            top_k=50,
+            repetition_penalty=1.5,  # Higher penalty for repetition
+            num_beams=4,
+            early_stopping=True
         )
         
         answer = response[0]['generated_text'].strip()
         
         # Clean up the response
-        answer = re.sub(r'(Professional response:|Answer:|Response:|sustainability expert)', '', answer, flags=re.IGNORECASE)
-        answer = answer.strip()
+        answer = re.sub(r'(Question:|Answer:|Response:|sustainability|renewable|energy)', '', answer, flags=re.IGNORECASE)
+        answer = re.sub(r'\s+', ' ', answer).strip()
         
         logger.info(f"Generated answer: {answer}")
         
@@ -124,6 +127,5 @@ Provide a professional, detailed response:"""
     except Exception as e:
         logger.error(f"Error in chat endpoint: {e}")
         return jsonify({"error": str(e)}), 500
-
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

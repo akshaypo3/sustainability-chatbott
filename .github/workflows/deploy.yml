@@ -1,4 +1,4 @@
-name: Build with SAP Test
+name: Deploy to SAP AI Core
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
       - 'sap-deployment/**'
 
 jobs:
-  build-and-test:
+  build-and-deploy:
     runs-on: ubuntu-latest
     
     steps:
@@ -27,23 +27,30 @@ jobs:
         push: true
         tags: ghcr.io/akshaypo3/sustainability-chatbott:light-cpu
 
-    - name: Test SAP Connection (Optional - won't fail build)
+    - name: Install dependencies
+      run: sudo apt-get update && sudo apt-get install -y curl jq
+
+    - name: Deploy to SAP AI Core
       env:
-        SAP_CLIENT_ID: ${{ secrets.SAP_CLIENT_ID }}
-        SAP_CLIENT_SECRET: ${{ secrets.SAP_CLIENT_SECRET }}
-        SAP_AUTH_URL: ${{ secrets.SAP_AUTH_URL }}
-        SAP_API_URL: ${{ secrets.SAP_API_URL }}
+        SAP_SERVICE_KEY: ${{ secrets.SAP_SERVICE_KEY }}
       run: |
-        echo "Testing SAP connection (optional)..."
-        # This won't fail the build even if it errors
-        curl -s -X POST "$SAP_AUTH_URL/oauth/token" \
-          -H "Content-Type: application/x-www-form-urlencoded" \
-          -d "grant_type=client_credentials&client_id=$SAP_CLIENT_ID&client_secret=$SAP_CLIENT_SECRET" \
-          || echo "SAP connection test completed (free tier limitations)"
+        # Parse service key
+        echo "$SAP_SERVICE_KEY" > service-key.json
+        CLIENT_ID=$(jq -r '.clientid' service-key.json)
+        CLIENT_SECRET=$(jq -r '.clientsecret' service-key.json)
+        AUTH_URL=$(jq -r '.url' service-key.json)/oauth/token
+        API_URL=$(jq -r '.serviceurls.AI_API_URL' service-key.json)
         
-    - name: Final Success
-      run: |
-        echo "🎉 Build completed successfully!"
-        echo "📦 Docker image: ghcr.io/akshaypo3/sustainability-chatbott:light-cpu"
-        echo "🔧 SAP deployment requires paid tier"
-        echo "💡 Use alternative deployment platforms"
+        # Get access token
+        TOKEN=$(curl -s -X POST "$AUTH_URL" \
+          -H "Content-Type: application/x-www-form-urlencoded" \
+          -d "grant_type=client_credentials&client_id=$CLIENT_ID&client_secret=$CLIENT_SECRET" \
+          | jq -r '.access_token')
+        
+        # Deploy serving template
+        curl -X POST "$API_URL/v2/lm/servingtemplates" \
+          -H "Authorization: Bearer $TOKEN" \
+          -H "Content-Type: multipart/form-data" \
+          -F "file=@sap-deployment/serving.yaml"
+        
+        echo "Deployment request sent to SAP AI Core"

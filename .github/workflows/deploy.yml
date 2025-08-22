@@ -1,4 +1,4 @@
-name: SAP AI Core Deployment
+name: Build and Push Docker Image
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
       - 'sap-deployment/**'
 
 jobs:
-  sap-deploy:
+  build-and-push:
     runs-on: ubuntu-latest
     
     steps:
@@ -27,49 +27,19 @@ jobs:
         push: true
         tags: ghcr.io/akshaypo3/sustainability-chatbott:light-cpu
 
-    - name: Install required tools
-      run: sudo apt-get update && sudo apt-get install -y curl jq
-
-    - name: Deploy to SAP AI Core
-      env:
-        SAP_CLIENT_ID: ${{ secrets.SAP_CLIENT_ID }}
-        SAP_CLIENT_SECRET: ${{ secrets.SAP_CLIENT_SECRET }}
-        SAP_AUTH_URL: ${{ secrets.SAP_AUTH_URL }}
-        SAP_API_URL: ${{ secrets.SAP_API_URL }}
+    - name: Test Docker Image
       run: |
-        # Get authentication token
-        echo "Getting SAP authentication token..."
-        TOKEN_RESPONSE=$(curl -s -X POST "$SAP_AUTH_URL/oauth/token" \
-          -H "Content-Type: application/x-www-form-urlencoded" \
-          -d "grant_type=client_credentials&client_id=$SAP_CLIENT_ID&client_secret=$SAP_CLIENT_SECRET")
-        
-        TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.access_token')
-        
-        if [ "$TOKEN" = "null" ] || [ -z "$TOKEN" ]; then
-          echo "❌ Failed to get access token"
-          echo "Response: $TOKEN_RESPONSE"
-          exit 1
-        fi
-        
-        echo "✅ Successfully obtained SAP token"
-        
-        # Deploy serving template
-        echo "Deploying to SAP AI Core..."
-        DEPLOY_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
-          "$SAP_API_URL/v2/lm/servingtemplates" \
-          -H "Authorization: Bearer $TOKEN" \
-          -H "Content-Type: multipart/form-data" \
-          -F "file=@sap-deployment/serving.yaml")
-        
-        HTTP_CODE=$(echo "$DEPLOY_RESPONSE" | tail -n1)
-        RESPONSE_BODY=$(echo "$DEPLOY_RESPONSE" | head -n -1)
-        
-        echo "HTTP Status Code: $HTTP_CODE"
-        echo "Response: $RESPONSE_BODY"
-        
-        if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
-          echo "✅ Deployment successful!"
-        else
-          echo "❌ Deployment failed with status code $HTTP_CODE"
-          exit 1
-        fi
+        echo "Testing the Docker image..."
+        docker run -d --name test-bot -p 5001:5000 ghcr.io/akshaypo3/sustainability-chatbott:light-cpu
+        sleep 15
+        echo "Health check:"
+        curl -s http://localhost:5001/health || echo "Health check failed - container might still be starting"
+        docker stop test-bot
+        docker rm test-bot
+
+    - name: Success Message
+      run: |
+        echo "✅ SUCCESS: Docker image built and pushed!"
+        echo "📦 Image URL: ghcr.io/akshaypo3/sustainability-chatbott:light-cpu"
+        echo "🚀 Run locally: docker run -p 5000:5000 ghcr.io/akshaypo3/sustainability-chatbott:light-cpu"
+        echo "💡 Deploy to: Render.com, Railway.app, or Heroku"

@@ -84,37 +84,34 @@ def chat():
                 "topic_restriction": "sustainability_only"
             })
         
-        # Better prompt to avoid repetition
-        prompt = f"""Please provide a clear and concise answer about sustainability:
-
-Question: {question}
-
-Answer in 2-3 sentences focusing on:
-- What it is and why it matters
-- Environmental benefits and impacts
-- Practical examples and applications
-
-Keep the response focused and avoid repetition:"""
+        # PROFESSIONAL PROMPT THAT WORKS:
+        prompt = f"""Q: {question}
+A: """
         
-        # Generate response with better parameters to avoid repetition
+        # Generate response with optimized parameters
         response = chatbot(
             prompt,
-            max_length=150,  # Shorter to avoid rambling
-            min_length=30,
+            max_length=100,
+            min_length=20,
             do_sample=True,
-            temperature=0.8,  # Slightly more creative
-            top_p=0.92,
-            top_k=50,
-            repetition_penalty=1.5,  # Higher penalty for repetition
+            temperature=0.3,  # Lower temperature for more focused answers
+            top_p=0.9,
+            top_k=30,
+            repetition_penalty=2.0,  # Very high penalty for repetition
             num_beams=4,
-            early_stopping=True
+            early_stopping=True,
+            no_repeat_ngram_size=2  # Prevent repeating 2-word phrases
         )
         
         answer = response[0]['generated_text'].strip()
         
         # Clean up the response
-        answer = re.sub(r'(Question:|Answer:|Response:|sustainability|renewable|energy)', '', answer, flags=re.IGNORECASE)
-        answer = re.sub(r'\s+', ' ', answer).strip()
+        answer = re.sub(r'^(Q:|A:|Question:|Answer:)', '', answer, flags=re.IGNORECASE)
+        answer = answer.strip()
+        
+        # Ensure the answer makes sense
+        if not answer or len(answer) < 10:
+            answer = "I provide information on sustainability topics. Please ask about renewable energy, environmental conservation, climate action, or green technology."
         
         logger.info(f"Generated answer: {answer}")
         

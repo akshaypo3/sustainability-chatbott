@@ -3,42 +3,22 @@ kind: ServingTemplate
 metadata:
   name: sustainability-chatbot
   annotations:
-    scenarios.ai.sap.com/description: "Sustainability Chatbot using FLAN-T5"
-    scenarios.ai.sap.com/name: "Sustainability"
-    executables.ai.sap.com/description: "Sustainability chatbot service"
-    executables.ai.sap.com/name: "sustainability-chatbot"
-    serving.kserve.io/deploymentTimeout: "600"
-    serving.kserve.io/responseTimeout: "300"
+    scenarios.ai.sap.com/description: "Sustainability Chatbot"
   labels:
     scenarios.ai.sap.com.id: "sustainability"
-    ai.sap.com.version: "1.0.0"
 spec:
-  template:
+  template: |
     apiVersion: serving.kserve.io/v1beta1
     kind: InferenceService
     metadata:
       name: sustainability-chatbot
-      annotations:
-        serving.kserve.io/deploymentMode: Serverless
     spec:
       predictor:
-        minReplicas: 1
-        maxReplicas: 2
         containers:
         - name: kserve-container
           image: ghcr.io/akshaypo3/sustainability-chatbott:light-cpu
           ports:
           - containerPort: 5000
-            protocol: TCP
           env:
           - name: PORT
             value: "5000"
-          - name: MODEL_NAME
-            value: "google/flan-t5-base"
-          resources:
-            requests:
-              memory: "4Gi"
-              cpu: "2"
-            limits:
-              memory: "8Gi"
-              cpu: "4"

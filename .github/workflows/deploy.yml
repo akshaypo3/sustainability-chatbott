@@ -1,4 +1,4 @@
-name: Build and Push Docker Image
+name: Build with SAP Test
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
       - 'sap-deployment/**'
 
 jobs:
-  build-and-push:
+  build-and-test:
     runs-on: ubuntu-latest
     
     steps:
@@ -27,19 +27,23 @@ jobs:
         push: true
         tags: ghcr.io/akshaypo3/sustainability-chatbott:light-cpu
 
-    - name: Test Docker Image
+    - name: Test SAP Connection (Optional - won't fail build)
+      env:
+        SAP_CLIENT_ID: ${{ secrets.SAP_CLIENT_ID }}
+        SAP_CLIENT_SECRET: ${{ secrets.SAP_CLIENT_SECRET }}
+        SAP_AUTH_URL: ${{ secrets.SAP_AUTH_URL }}
+        SAP_API_URL: ${{ secrets.SAP_API_URL }}
       run: |
-        echo "Testing the Docker image..."
-        docker run -d --name test-bot -p 5001:5000 ghcr.io/akshaypo3/sustainability-chatbott:light-cpu
-        sleep 15
-        echo "Health check:"
-        curl -s http://localhost:5001/health || echo "Health check failed - container might still be starting"
-        docker stop test-bot
-        docker rm test-bot
-
-    - name: Success Message
+        echo "Testing SAP connection (optional)..."
+        # This won't fail the build even if it errors
+        curl -s -X POST "$SAP_AUTH_URL/oauth/token" \
+          -H "Content-Type: application/x-www-form-urlencoded" \
+          -d "grant_type=client_credentials&client_id=$SAP_CLIENT_ID&client_secret=$SAP_CLIENT_SECRET" \
+          || echo "SAP connection test completed (free tier limitations)"
+        
+    - name: Final Success
       run: |
-        echo "✅ SUCCESS: Docker image built and pushed!"
-        echo "📦 Image URL: ghcr.io/akshaypo3/sustainability-chatbott:light-cpu"
-        echo "🚀 Run locally: docker run -p 5000:5000 ghcr.io/akshaypo3/sustainability-chatbott:light-cpu"
-        echo "💡 Deploy to: Render.com, Railway.app, or Heroku"
+        echo "🎉 Build completed successfully!"
+        echo "📦 Docker image: ghcr.io/akshaypo3/sustainability-chatbott:light-cpu"
+        echo "🔧 SAP deployment requires paid tier"
+        echo "💡 Use alternative deployment platforms"

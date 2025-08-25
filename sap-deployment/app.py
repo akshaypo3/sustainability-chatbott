@@ -2,6 +2,7 @@ from flask import Flask, jsonify, request
 from transformers import pipeline
 import os
 import logging
+import re
 
 app = Flask(__name__)
 
@@ -16,7 +17,7 @@ def load_model():
     """Load the model pipeline"""
     global chatbot
     try:
-        model_name = os.getenv('MODEL_NAME', 'google/flan-t5-base')  # Default to flan-t5-base
+        model_name = os.getenv('MODEL_NAME', 'google/flan-t5-base')  # Use base for better quality
         logger.info(f"Loading model: {model_name}")
         
         chatbot = pipeline(
@@ -29,7 +30,7 @@ def load_model():
         logger.error(f"Error loading model: {e}")
         raise
 
-# Load model at startup
+# Load model when module is imported
 load_model()
 
 def is_sustainability_related(question):
@@ -39,45 +40,97 @@ def is_sustainability_related(question):
         'energy', 'recycle', 'waste', 'pollution', 'conservation', 'biodiversity',
         'solar', 'wind', 'hydro', 'geothermal', 'organic', 'compost', 'emission',
         'electric vehicle', 'ev', 'zero waste', 'circular economy', 'green building',
-        'sustainable development', 'clean energy', 'carbon footprint', 'global warming',
-        'water conservation', 'deforestation', 'ecosystem', 'sustainable farming'
+        'sustainable development', 'clean energy', 'carbon footprint', 'global warming'
     ]
     
     question_lower = question.lower()
     return any(keyword in question_lower for keyword in sustainability_keywords)
 
-# Pre-defined professional answers for reliability
+# Enhanced professional answers with better coverage
 PROFESSIONAL_ANSWERS = {
-    'solar': "Solar energy harnesses sunlight through photovoltaic panels to generate clean electricity. It's a renewable source that reduces carbon emissions, lowers energy costs, and decreases dependence on fossil fuels.",
+    'solar': "Solar energy harnesses sunlight through photovoltaic panels to generate clean electricity. It reduces carbon emissions by 95% compared to fossil fuels, lowers energy costs, decreases dependence on non-renewable resources, and supports sustainable development. Solar power is renewable, abundant, and creates green jobs while mitigating climate change impacts.",
     
-    'renewable': "Renewable energy comes from naturally replenished sources like sunlight, wind, water, and geothermal heat. These sustainable alternatives reduce greenhouse gas emissions and support long-term environmental protection.",
+    'renewable': "Renewable energy comes from naturally replenished sources like sunlight, wind, water, and geothermal heat. These sustainable alternatives reduce greenhouse gas emissions by 80-90%, promote energy independence, improve air quality, and support environmental conservation. Renewable energy is crucial for achieving net-zero emissions and sustainable economic growth.",
     
-    'wind': "Wind power converts the kinetic energy of moving air into electricity using turbines. It produces no emissions, helps reduce dependence on fossil fuels, and supports climate change mitigation.",
+    'wind': "Wind power converts kinetic energy from wind into electricity using turbines. It's a clean, renewable energy source that produces zero emissions, reduces air pollution, creates local jobs, and contributes to climate change mitigation. Modern wind farms can power thousands of homes while preserving natural resources and reducing water consumption compared to conventional power plants.",
     
-    'recycl': "Recycling conserves natural resources by reprocessing materials into new products. It reduces landfill waste, saves energy, decreases pollution, and supports a circular economy.",
+    'recycl': "Recycling conserves natural resources by reprocessing materials into new products. It reduces landfill waste by 75%, saves 95% of energy compared to virgin material production, decreases pollution, conserves natural habitats, and supports circular economy principles. Effective recycling reduces greenhouse gas emissions and extends the lifespan of valuable resources.",
     
-    'climate': "Climate change refers to long-term shifts in temperature and weather patterns mainly caused by human activity. Solutions include adopting renewable energy, cutting emissions, and protecting ecosystems.",
+    'climate': "Climate change refers to long-term shifts in global weather patterns primarily caused by human activities like burning fossil fuels. Sustainable solutions include renewable energy adoption (solar, wind, hydro), energy efficiency improvements, reforestation, sustainable agriculture, carbon capture technologies, and international cooperation to reduce emissions by 45% by 2030.",
     
-    'environment': "Environmental sustainability means protecting natural resources and ecosystems while meeting human needs. It includes renewable energy, waste reduction, and conservation efforts.",
+    'environment': "Environmental sustainability involves protecting natural resources and ecosystems while meeting human needs. It encompasses renewable energy systems, waste reduction strategies, biodiversity conservation, water management, sustainable agriculture, and green infrastructure development to minimize ecological impact and ensure resources for future generations.",
     
-    'energy': "Sustainable energy focuses on renewable sources like solar, wind, and hydropower that minimize environmental impact. These alternatives reduce carbon emissions and promote energy security.",
+    'energy': "Sustainable energy focuses on renewable sources that minimize environmental impact. Solar, wind, hydro, geothermal, and biomass energy reduce carbon emissions by 80-100%, enhance energy security, create green jobs, improve public health, and support economic stability while preserving natural resources for future generations.",
     
-    'green': "Green technology includes eco-friendly solutions like renewable energy, sustainable construction, and clean transportation. It reduces environmental impact while supporting sustainable growth.",
-    
-    'water': "Water conservation involves efficient use of water to ensure long-term availability. Methods include rainwater harvesting, fixing leaks, and sustainable irrigation practices.",
-    
-    'deforestation': "Deforestation is the clearing of forests for agriculture, logging, or development. It threatens biodiversity and accelerates climate change. Reforestation and sustainable land management are key solutions."
+    'green': "Green technology encompasses environmentally friendly solutions including renewable energy systems, energy-efficient devices, sustainable materials, electric vehicles, smart grids, water purification systems, and waste management technologies. These innovations reduce ecological footprint, conserve resources, and promote sustainable economic development while addressing climate change challenges."
 }
 
 def get_professional_answer(question):
     """Get pre-defined professional answer based on keywords"""
     question_lower = question.lower()
     
+    # Check for specific keywords and return pre-defined answers
     for keyword, answer in PROFESSIONAL_ANSWERS.items():
         if keyword in question_lower:
             return answer
     
-    return "Sustainable practices focus on renewable resources, environmental protection, and reducing carbon footprint. This includes clean energy adoption, efficient resource use, and conservation for future generations."
+    # For other questions, use AI with MUCH better prompt engineering
+    return generate_ai_answer(question)
+
+def generate_ai_answer(question):
+    """Generate AI answer with optimized prompt engineering"""
+    try:
+        # MUCH BETTER PROMPT ENGINEERING
+        prompt = f"""As a sustainability expert with 15 years experience, provide a comprehensive yet concise answer.
+
+Question: {question}
+
+Please structure your response with:
+1. Clear definition and scientific explanation
+2. Environmental benefits and impact metrics
+3. Practical applications and real-world examples
+4. Importance for sustainable development goals
+5. Future outlook and trends
+
+Ensure the answer is:
+- Professionally toned and evidence-based
+- 100-150 words maximum
+- Focused on factual information
+- Free of repetition and vague statements
+- Contains specific data where possible
+
+Expert analysis:"""
+        
+        # Optimized generation parameters
+        response = chatbot(
+            prompt,
+            max_length=200,
+            min_length=80,
+            do_sample=True,
+            temperature=0.4,  # Lower for more factual responses
+            top_p=0.9,
+            top_k=40,
+            repetition_penalty=1.3,
+            num_beams=4,
+            early_stopping=True,
+            no_repeat_ngram_size=3
+        )
+        
+        answer = response[0]['generated_text'].strip()
+        
+        # Enhanced cleaning
+        answer = re.sub(r'(Expert analysis:|Question:|Answer:|Response:|sustainability expert|Q:|A:)', '', answer, flags=re.IGNORECASE)
+        answer = re.sub(r'\s+', ' ', answer).strip()
+        
+        # Quality check - ensure meaningful response
+        if len(answer) < 30 or any(x in answer for x in ['?', '(', ')', '[', ']', '1.', '2.', '3.']):
+            return "I provide detailed information on sustainability topics. Could you please rephrase your question to be more specific about environmental, renewable energy, or conservation topics?"
+        
+        return answer
+        
+    except Exception as e:
+        logger.error(f"AI generation error: {e}")
+        return "Sustainable practices focus on renewable resources, environmental protection, and reducing carbon footprint through clean energy adoption, efficient resource management, and conservation efforts that maintain ecological balance for future generations."
 
 @app.route('/health')
 def health():
@@ -109,45 +162,16 @@ def chat():
         
         logger.info(f"Received question: {question}")
         
-        # Check if sustainability-related
+        # Check if question is sustainability-related
         if not is_sustainability_related(question):
             return jsonify({
                 "question": question,
-                "answer": "I specialize only in sustainability and environmental topics. Please ask me about renewable energy, climate change, recycling, or related subjects.",
+                "answer": "I specialize only in sustainability and environmental topics. Please ask me about renewable energy, climate change, recycling, green technology, conservation, or other environmental subjects.",
                 "topic_restriction": "sustainability_only"
             })
         
-        # Default professional answer
+        # Get professional answer
         professional_answer = get_professional_answer(question)
-        
-        # Use AI for complex questions (5+ words)
-        if len(question.split()) > 4:
-            try:
-                prompt = f"""
-You are a sustainability expert.
-Answer the following question with accurate, professional, and non-repetitive information.
-Guidelines:
-- Stay strictly on sustainability and environmental topics.
-- Give a clear, factual explanation (3–5 sentences).
-- Do not repeat words or phrases.
-- Do not invent false facts. If unsure, politely say the answer is not available.
-- Keep the tone professional and easy to understand.
-
-Question: {question}
-Answer:
-"""
-                response = chatbot(
-                    prompt,
-                    max_length=180,
-                    do_sample=False,   # Deterministic output
-                    temperature=0.0    # Prevent hallucination
-                )
-                ai_answer = response[0]['generated_text'].strip()
-                
-                if len(ai_answer) > 20 and not any(x in ai_answer for x in ['?', '(', ')', '[', ']']):
-                    professional_answer = ai_answer
-            except Exception as e:
-                logger.error(f"AI generation failed, fallback used: {e}")
         
         return jsonify({
             "question": question,
@@ -159,7 +183,7 @@ Answer:
         logger.error(f"Error in chat endpoint: {e}")
         return jsonify({
             "question": question,
-            "answer": get_professional_answer(question),
+            "answer": "I provide expert information on sustainability topics including renewable energy, environmental conservation, climate action, and green technology. Please ask your question again.",
             "topic": "sustainability",
             "error_handled": True
         })
